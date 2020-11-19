@@ -1,0 +1,12 @@
+{
+  "name": "anux-server",
+  "version": "0.1.0",
+  "description": "",
+  "main": "./dist/index.js",
+  "scripts": {},
+  "author": "anupheaus",
+  "dependencies": {},
+  "devDependencies": {
+    "anux-package": "^1.0.56"
+  }
+}
