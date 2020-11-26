@@ -1,12 +1,49 @@
 {
   "name": "anux-server",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "",
+  "repository": "https://github.com/Anupheaus/anux-common.git",
+  "author": "Anupheaus",
+  "license": "Apache-2.0",
   "main": "./dist/index.js",
   "scripts": {},
-  "author": "anupheaus",
-  "dependencies": {},
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@koa/cors": "^3.1.0",
+    "@types/koa": "^2.0.45",
+    "@types/winston": "^2.4.4",
+    "anux-common": "^1.0.70",
+    "anux-logger": "^0.1.0",
+    "chalk": "^4.1.0",
+    "class-transformer": "^0.3.1",
+    "class-validator": "^0.12.2",
+    "koa": "^2.13.0",
+    "koa-bodyparser": "^4.3.0",
+    "koa-logger": "^3.2.1",
+    "koa-pug": "^4.0.4",
+    "koa-static": "^5.0.0",
+    "routing-controllers": "^0.9.0-alpha.6"
+  },
   "devDependencies": {
-    "anux-package": "^1.0.56"
+    "@types/axios": "^0.14.0",
+    "@types/dotenv": "^8.2.0",
+    "@types/koa-bodyparser": "^4.2.0",
+    "@types/koa-logger": "^3.1.1",
+    "@types/koa-pug": "^4.0.0",
+    "@types/koa-static": "^4.0.1",
+    "@types/koa__cors": "^3.0.2",
+    "anux-package": "^1.0.57",
+    "axios": "^0.21.0",
+    "dotenv": "^8.2.0",
+    "eslint": "^7.13.0",
+    "nodemon-webpack-plugin": "^4.3.2",
+    "reflect-metadata": "^0.1.13",
+    "ts-loader": "^8.0.11",
+    "typescript": "^4.0.5",
+    "webpack": "^5.5.1",
+    "webpack-cli": "^4.2.0",
+    "webpack-node-externals": "^2.5.2"
   }
 }
