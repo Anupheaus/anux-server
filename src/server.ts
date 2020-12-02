@@ -1,13 +1,15 @@
 import { is, PromiseMaybe } from 'anux-common';
 import chalk from 'chalk';
 import Server, { Middleware } from 'koa';
-import { Server as ListeningServer } from 'http';
 import { createKoaServer } from 'routing-controllers';
 import bodyParser from 'koa-bodyparser';
 import { createLogger, Logger } from 'anux-logger';
 import koaStatic from 'koa-static';
 import cors from '@koa/cors';
 import { usePug } from './pug';
+import { createSecureServer, Http2SecureServer } from 'http2';
+import fs from 'fs';
+import path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getStartTime = (ctx: any): number => ctx[Symbol.for('request-received.startTime')]?.getTime() ?? Date.now();
@@ -56,33 +58,57 @@ function logRequests(logger: Logger): Middleware {
 }
 
 interface Props {
+  host?: string;
   port?: number;
   controllers?: Function[];
   logger?: Logger;
   viewsPath?: string;
   staticPath?: string;
-  keepAliveTimeout?: number;
+  keyFile: string | Buffer;
+  certFile: string | Buffer;
+  caFile: string | Buffer;
   onBeforeStarted?(app: Server): PromiseMaybe<void>;
   onStarted?(app: Server): PromiseMaybe<void>;
   onStopped?(app: Server): PromiseMaybe<void>;
 }
 
+async function startListening(app: Server, host: string, port: number, keyFile: string | Buffer | undefined, certFile: string | Buffer | undefined,
+  caFile: string | Buffer | undefined): Promise<Http2SecureServer> {
+  const key = is.string(keyFile) ? fs.readFileSync(path.resolve(process.cwd(), keyFile)) : keyFile;
+  const cert = is.string(certFile) ? fs.readFileSync(path.resolve(process.cwd(), certFile)) : certFile;
+  const ca = is.string(caFile) ? fs.readFileSync(path.resolve(process.cwd(), caFile)) : caFile;
+  return new Promise<Http2SecureServer>(resolve => {
+    const listeningServer = createSecureServer({
+      key,
+      cert,
+      ca,
+      allowHTTP1: true,
+    }, app.callback())
+      .listen({ host, port }, () => {
+        resolve(listeningServer);
+      });
+  });
+}
+
 export function startServer({
+  host = 'localhost',
   port = 3000,
   logger = createLogger({ category: 'anux-server' }),
-  keepAliveTimeout,
   viewsPath,
   staticPath,
   controllers = [],
+  keyFile,
+  certFile,
+  caFile,
   onBeforeStarted = () => void 0,
   onStarted = () => void 0,
   onStopped = () => void 0,
-}: Props = {}) {
+}: Props) {
   logger.info('Starting server...', { port });
   const app: Server = createKoaServer({
     controllers,
   });
-  let listeningServer: ListeningServer | undefined = undefined;
+  let listeningServer: Http2SecureServer | undefined = undefined;
   let hasStoppedServer = false;
   let hasServerStarted = false;
   (async () => {
@@ -95,22 +121,10 @@ export function startServer({
       if (hasStoppedServer) return;
       await onBeforeStarted(app);
       if (hasStoppedServer) return;
-      await new Promise((resolve, reject) => {
-        listeningServer = app
-          .listen(port)
-          .on('error', error => {
-            logError(logger, error);
-            reject(error);
-          })
-          .on('listening', async () => {
-            logger.debug('Server accepting requests...');
-            await onStarted(app);
-            hasServerStarted = true;
-            logger.info('Server started.');
-            resolve();
-          });
-        if (keepAliveTimeout != null && keepAliveTimeout >= 1) listeningServer.keepAliveTimeout = keepAliveTimeout;
-      });
+      listeningServer = await startListening(app, host, port, keyFile, certFile, caFile);
+      hasServerStarted = true;
+      logger.debug('Server accepting requests...');
+      await onStarted(app);
     } catch (error) {
       logError(logger, error);
     }
@@ -118,7 +132,7 @@ export function startServer({
   return async () => {
     logger.info('Stopping server...');
     hasStoppedServer = true;
-    await new Promise(resolve => listeningServer ? listeningServer.close(resolve) : resolve());
+    await new Promise<void>(resolve => listeningServer ? listeningServer.close(() => resolve()) : resolve());
     if (hasServerStarted) await onStopped(app);
     logger.info('Server stopped.');
   };
